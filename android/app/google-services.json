@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "36334450962",
+    "project_id": "cariindong-c2e68",
+    "storage_bucket": "cariindong-c2e68.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:36334450962:android:8e1ea4bd513f72cb4a9bcb",
+        "android_client_info": {
+          "package_name": "com.example.cariindong_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "36334450962-bjk3lvgsjnta25lpuo3ks7joajo253a5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cariindong_app",
+            "certificate_hash": "32482af67c3bd4c269c238d8f611b5fa63f3e5d5"
+          }
+        },
+        {
+          "client_id": "36334450962-n1v87j55r569lsl8mf3qsrd4eikgpcoe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAodpHOGuvuhe17_y2TeholovIn-IpEbG8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "36334450962-n1v87j55r569lsl8mf3qsrd4eikgpcoe.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "36334450962-8iv3h2nahsjmq1ij8ljk3i1citbf3igs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.cariindongApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
