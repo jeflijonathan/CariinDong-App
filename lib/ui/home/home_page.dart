@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/app_state.dart';
-import '../../models/user_model.dart';
-import '../widgets/item_card.dart';
-import '../form/lost_item_form_page.dart';
+import 'package:cariindong_app/providers/app_state.dart';
+import 'package:cariindong_app/models/user_model.dart';
+import 'package:cariindong_app/ui/widgets/item_card.dart';
+import 'package:cariindong_app/ui/form/lost_item_form_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -7,11 +7,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../../models/item_model.dart';
-import '../../models/user_model.dart';
-import '../../providers/app_state.dart';
-import '../../core/theme.dart';
-import 'full_screen_map_page.dart';
+import 'package:cariindong_app/models/item_model.dart';
+import 'package:cariindong_app/models/user_model.dart';
+import 'package:cariindong_app/providers/app_state.dart';
+import 'package:cariindong_app/core/theme.dart';
+import 'package:cariindong_app/ui/detail/full_screen_map_page.dart';
 
 class ItemDetailPage extends StatefulWidget {
   final ItemModel item;
