@@ -4,6 +4,8 @@ import 'package:cariindong_app/providers/app_state.dart';
 import 'package:cariindong_app/models/user_model.dart';
 import 'package:cariindong_app/ui/widgets/item_card.dart';
 import 'package:cariindong_app/ui/form/lost_item_form_page.dart';
+import 'package:cariindong_app/models/item_model.dart';
+import 'package:cariindong_app/ui/inbox/inbox_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -13,6 +15,10 @@ class HomePage extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
     final user = appState.currentUser;
     final isSuperAdmin = user.role == UserRole.superAdmin;
+    final hasPendingClaims = appState.items.any((item) =>
+        item.reporterUid == user.uid &&
+        item.pendingClaims.isNotEmpty &&
+        (item.status == ItemStatus.lost || item.status == ItemStatus.found));
 
     return Scaffold(
       appBar: AppBar(
@@ -47,6 +53,36 @@ class HomePage extends StatelessWidget {
                 ],
               ),
             ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InboxPage(),
+                    ),
+                  );
+                },
+              ),
+              if (hasPendingClaims)
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: CustomScrollView(

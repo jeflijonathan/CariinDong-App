@@ -3,14 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:convert';
 import 'package:cariindong_app/providers/app_state.dart';
 import 'package:cariindong_app/models/item_model.dart';
 import 'package:cariindong_app/ui/profile/edit_profile_page.dart';
 import 'package:cariindong_app/ui/form/map_picker_page.dart';
 
 class LostItemFormPage extends StatefulWidget {
-  const LostItemFormPage({super.key});
+  final ItemModel? existingItem;
+
+  const LostItemFormPage({super.key, this.existingItem});
 
   @override
   State<LostItemFormPage> createState() => _LostItemFormPageState();
@@ -27,6 +29,25 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
   ItemStatus _status = ItemStatus.lost;
   double? _latitude;
   double? _longitude;
+
+  String? _existingImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingItem != null) {
+      final item = widget.existingItem!;
+      _title = item.title;
+      _description = item.description;
+      _location = item.location;
+      _locationController.text = item.location;
+      _category = item.category;
+      _status = item.status;
+      _latitude = item.latitude;
+      _longitude = item.longitude;
+      _existingImageUrl = item.imageUrl;
+    }
+  }
 
   File? _imageFile;
   bool _isLoading = false;
@@ -66,12 +87,8 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
   Future<String?> _uploadImage(String itemId) async {
     if (_imageFile == null) return null;
     try {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('items')
-          .child('$itemId.jpg');
-      await ref.putFile(_imageFile!);
-      return await ref.getDownloadURL();
+      final bytes = await _imageFile!.readAsBytes();
+      return base64Encode(bytes);
     } catch (e) {
       debugPrint("Error uploading image: $e");
       return null;
@@ -123,9 +140,12 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
       }
 
       setState(() => _isLoading = true);
-      final itemId = const Uuid().v4();
+      final itemId = widget.existingItem?.id ?? const Uuid().v4();
 
-      String? imageUrl = await _uploadImage(itemId);
+      String? imageUrl = _existingImageUrl;
+      if (_imageFile != null) {
+        imageUrl = await _uploadImage(itemId);
+      }
 
       final newItem = ItemModel(
         id: itemId,
@@ -134,22 +154,32 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
         location: _location,
         status: _status,
         category: _category,
-        reporterName: currentUser.name,
-        reporterUid: currentUser.uid ?? '',
-        reporterPhone: currentUser.phoneNumber,
-        date: DateTime.now(),
+        reporterName: widget.existingItem?.reporterName ?? currentUser.name,
+        reporterUid: widget.existingItem?.reporterUid ?? currentUser.uid ?? '',
+        reporterPhone: widget.existingItem?.reporterPhone ?? currentUser.phoneNumber,
+        date: widget.existingItem?.date ?? DateTime.now(),
         imageUrl: imageUrl,
         latitude: _latitude,
         longitude: _longitude,
+        claimedByUid: widget.existingItem?.claimedByUid,
+        claimedByName: widget.existingItem?.claimedByName,
+        claimedByPhone: widget.existingItem?.claimedByPhone,
+        claimerProofUrl: widget.existingItem?.claimerProofUrl,
+        claimProofUrl: widget.existingItem?.claimProofUrl,
+        receiverName: widget.existingItem?.receiverName,
       );
 
-      await appState.addItem(newItem);
+      if (widget.existingItem != null) {
+        await appState.updateItem(newItem);
+      } else {
+        await appState.addItem(newItem);
+      }
 
       setState(() => _isLoading = false);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Laporan berhasil disimpan!')),
+          SnackBar(content: Text(widget.existingItem != null ? 'Laporan berhasil diperbarui!' : 'Laporan berhasil disimpan!')),
         );
         Navigator.pop(context);
       }
@@ -165,7 +195,7 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Buat Laporan Baru')),
+      appBar: AppBar(title: Text(widget.existingItem != null ? 'Edit Laporan' : 'Buat Laporan Baru')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -192,7 +222,22 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
                                   fit: BoxFit.cover,
                                 ),
                               )
-                            : const Column(
+                            : (_existingImageUrl != null && _existingImageUrl!.isNotEmpty)
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: _existingImageUrl!.startsWith('http')
+                                        ? Image.network(
+                                            _existingImageUrl!,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                          )
+                                        : Image.memory(
+                                            base64Decode(_existingImageUrl!),
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                          ),
+                                  )
+                                : const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
@@ -211,6 +256,7 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      initialValue: _title,
                       decoration: const InputDecoration(
                         labelText: 'Nama Barang',
                         hintText: 'Misal: KTP, Laptop ASUS, Kunci Motor',
@@ -236,19 +282,31 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
                         labelText: 'Status Laporan',
                       ),
                       initialValue: _status,
-                      items: const [
-                        DropdownMenuItem(
+                      items: [
+                        const DropdownMenuItem(
                           value: ItemStatus.lost,
                           child: Text('Kehilangan Barang'),
                         ),
-                        DropdownMenuItem(
+                        const DropdownMenuItem(
                           value: ItemStatus.found,
                           child: Text('Menemukan Barang'),
                         ),
+                        if (_status == ItemStatus.claimed)
+                          const DropdownMenuItem(
+                            value: ItemStatus.claimed,
+                            child: Text('Diklaim (Menunggu Serah Terima)'),
+                          ),
+                        if (_status == ItemStatus.resolved)
+                          const DropdownMenuItem(
+                            value: ItemStatus.resolved,
+                            child: Text('Selesai'),
+                          ),
                       ],
-                      onChanged: (value) {
-                        setState(() => _status = value!);
-                      },
+                      onChanged: (_status == ItemStatus.claimed || _status == ItemStatus.resolved) 
+                          ? null 
+                          : (value) {
+                              setState(() => _status = value!);
+                            },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -282,6 +340,7 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      initialValue: _description,
                       maxLines: 4,
                       decoration: const InputDecoration(
                         labelText: 'Keterangan Tambahan',
@@ -302,7 +361,7 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
                         ),
                       ),
                       onPressed: _submitForm,
-                      child: const Text('Simpan Laporan'),
+                      child: Text(widget.existingItem != null ? 'Simpan Perubahan' : 'Simpan Laporan'),
                     ),
                   ],
                 ),

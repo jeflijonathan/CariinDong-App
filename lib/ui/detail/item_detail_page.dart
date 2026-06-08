@@ -6,12 +6,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cariindong_app/models/item_model.dart';
 import 'package:cariindong_app/models/user_model.dart';
 import 'package:cariindong_app/providers/app_state.dart';
 import 'package:cariindong_app/core/theme.dart';
 import 'package:cariindong_app/ui/detail/full_screen_map_page.dart';
+import 'package:cariindong_app/ui/form/lost_item_form_page.dart';
 
 class ItemDetailPage extends StatefulWidget {
   final ItemModel item;
@@ -159,12 +159,8 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     setState(() => _isLoading = true);
     try {
       final file = File(pickedFile.path);
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('claimer_proofs')
-          .child('${widget.item.id}_claimer.jpg');
-      await ref.putFile(file);
-      final claimerProofUrl = await ref.getDownloadURL();
+      final bytes = await file.readAsBytes();
+      final claimerProofUrl = base64Encode(bytes);
 
       await appState.claimItem(
         widget.item.id,
@@ -187,6 +183,48 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Gagal mengklaim: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _cancelPendingClaim() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Batalkan Klaim?'),
+        content: const Text('Apakah Anda yakin ingin membatalkan pengajuan klaim ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Tidak'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      await appState.cancelPendingClaim(widget.item.id, appState.currentUser.uid!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Klaim berhasil dibatalkan.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membatalkan klaim: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -282,12 +320,8 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     setState(() => _isLoading = true);
     try {
       final file = File(pickedFile.path);
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('claim_proofs')
-          .child('${widget.item.id}_proof.jpg');
-      await ref.putFile(file);
-      final proofUrl = await ref.getDownloadURL();
+      final bytes = await file.readAsBytes();
+      final proofUrl = base64Encode(bytes);
 
       await appState.confirmClaim(widget.item.id, proofUrl: proofUrl);
       if (mounted) {
@@ -305,6 +339,114 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _acceptClaim(Map<String, dynamic> claim) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    setState(() => _isLoading = true);
+    try {
+      await appState.acceptClaim(widget.item.id, claim);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Klaim diterima! Silakan lanjut ke serah terima jika barang sudah dikembalikan.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menerima klaim: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showPendingClaimDialog(Map<String, dynamic> claim) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.verified_user, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Detail Bukti Pengklaim',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildInfoRowCompact(Icons.person, 'Nama', claim['name'] ?? '-'),
+              const SizedBox(height: 6),
+              _buildInfoRowCompact(
+                Icons.phone,
+                'Telepon',
+                claim['phone'] ?? '-',
+              ),
+              const SizedBox(height: 12),
+              if (claim['proofUrl'] != null &&
+                  claim['proofUrl'].toString().isNotEmpty) ...[
+                const Text(
+                  '📷 Foto Bukti:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: _buildDynamicImage(claim['proofUrl'], height: 200),
+                ),
+              ] else ...[
+                const Text(
+                  'Tidak ada foto bukti.',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Tutup'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await _acceptClaim(claim);
+                      },
+                      child: const Text('Terima Klaim Ini'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<bool?> _showClaimerProofDialog() {
@@ -365,22 +507,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    item.claimerProofUrl!,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (ctx, child, progress) => progress == null
-                        ? child
-                        : const Center(child: CircularProgressIndicator()),
-                    errorBuilder: (ctx, e, st) => Container(
-                      height: 200,
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: Icon(Icons.broken_image, size: 40),
-                      ),
-                    ),
-                  ),
+                  child: _buildDynamicImage(item.claimerProofUrl!, height: 200),
                 ),
               ] else ...[
                 Container(
@@ -421,7 +548,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                         backgroundColor: Colors.green,
                       ),
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Terima Klaim'),
+                      child: const Text('Lanjut Serah Terima'),
                     ),
                   ),
                 ],
@@ -526,33 +653,40 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     }
   }
 
-  Widget _buildImage(String imageUrl) {
+  Widget _buildDynamicImage(String imageUrl, {double height = 250}) {
     if (imageUrl.startsWith('http')) {
       return Image.network(
         imageUrl,
-        height: 250,
+        height: height,
+        width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildErrorPlaceholder(),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildErrorPlaceholder(height),
+        loadingBuilder: (ctx, child, progress) => progress == null
+            ? child
+            : const Center(child: CircularProgressIndicator()),
       );
     } else {
       try {
         final bytes = base64Decode(imageUrl);
         return Image.memory(
           bytes,
-          height: 250,
+          height: height,
+          width: double.infinity,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) =>
-              _buildErrorPlaceholder(),
+              _buildErrorPlaceholder(height),
         );
       } catch (_) {
-        return _buildErrorPlaceholder();
+        return _buildErrorPlaceholder(height);
       }
     }
   }
 
-  Widget _buildErrorPlaceholder() {
+  Widget _buildErrorPlaceholder(double height) {
     return Container(
-      height: 250,
+      height: height,
+      width: double.infinity,
       color: Colors.grey.shade300,
       child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
     );
@@ -567,9 +701,13 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     final isReporter = currentUser.uid == item.reporterUid;
     final isClaimed = item.status == ItemStatus.claimed;
     final isResolved = item.status == ItemStatus.resolved;
+    final hasClaimed = item.pendingClaims.any(
+      (claim) => claim['uid'] == currentUser.uid,
+    );
     final canClaim =
         !isReporter &&
         !isSuperAdmin &&
+        !hasClaimed &&
         (item.status == ItemStatus.lost || item.status == ItemStatus.found);
 
     final hasCoordinates = item.latitude != null && item.longitude != null;
@@ -578,7 +716,23 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
       appBar: AppBar(
         title: const Text('Detail Laporan'),
         actions: [
-          if (isSuperAdmin)
+          if (isReporter)
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.yellow),
+              tooltip: 'Edit Laporan',
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              LostItemFormPage(existingItem: item),
+                        ),
+                      );
+                    },
+            ),
+          if (isSuperAdmin || isReporter)
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               tooltip: 'Hapus Laporan',
@@ -593,7 +747,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
-                    _buildImage(item.imageUrl!)
+                    _buildDynamicImage(item.imageUrl!)
                   else
                     Container(
                       height: 250,
@@ -825,8 +979,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                                   ),
                                 ],
 
-                                if (isReporter &&
-                                    item.claimerProofUrl != null &&
+                                if (item.claimerProofUrl != null &&
                                     item.claimerProofUrl!.isNotEmpty) ...[
                                   const SizedBox(height: 16),
                                   Text(
@@ -841,26 +994,9 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                                   const SizedBox(height: 8),
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(10),
-                                    child: Image.network(
+                                    child: _buildDynamicImage(
                                       item.claimerProofUrl!,
                                       height: 180,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder: (ctx, child, progress) =>
-                                          progress == null
-                                          ? child
-                                          : const Center(
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            ),
-                                      errorBuilder: (ctx, e, st) => Container(
-                                        height: 180,
-                                        color: Colors.grey.shade300,
-                                        child: const Icon(
-                                          Icons.broken_image,
-                                          size: 40,
-                                        ),
-                                      ),
                                     ),
                                   ),
                                 ] else if (isClaimed && isReporter) ...[
@@ -911,20 +1047,9 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                           const SizedBox(height: 8),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
+                            child: _buildDynamicImage(
                               item.claimProofUrl!,
                               height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    height: 200,
-                                    color: Colors.grey.shade300,
-                                    child: const Icon(
-                                      Icons.broken_image,
-                                      size: 50,
-                                    ),
-                                  ),
                             ),
                           ),
                         ],
@@ -947,6 +1072,94 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                               ),
                             ),
                           ),
+
+                        if (hasClaimed && !isResolved && !isClaimed)
+                          Column(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.hourglass_bottom,
+                                      color: Colors.blue,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Anda telah mengirimkan klaim untuk barang ini. Menunggu konfirmasi dari pelapor.',
+                                        style: TextStyle(
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: OutlinedButton.icon(
+                                  onPressed: _cancelPendingClaim,
+                                  icon: const Icon(Icons.cancel, color: Colors.red),
+                                  label: const Text(
+                                    'Batalkan Klaim',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.red),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        if ((item.status == ItemStatus.lost || item.status == ItemStatus.found) &&
+                            item.pendingClaims.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          Text(
+                            'Daftar Pengklaim / Penemu (${item.pendingClaims.length})',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: item.pendingClaims.length,
+                            itemBuilder: (context, index) {
+                              final claim = item.pendingClaims[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  leading: const CircleAvatar(
+                                    child: Icon(Icons.person),
+                                  ),
+                                  title: Text(claim['name'] ?? 'Anonim'),
+                                  subtitle: isReporter 
+                                      ? Text(claim['phone'] ?? '') 
+                                      : const Text('Telah mengirim bukti', style: TextStyle(fontStyle: FontStyle.italic)),
+                                  trailing: isReporter ? const Icon(Icons.chevron_right) : null,
+                                  onTap: isReporter ? () => _showPendingClaimDialog(claim) : null,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
 
                         if (isReporter && isClaimed) ...[
                           Container(

@@ -29,6 +29,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Layanan lokasi tidak aktif. Harap aktifkan GPS.')),
+        );
+      }
       setState(() => _isLoading = false);
       return;
     }
@@ -37,31 +42,50 @@ class _MapPickerPageState extends State<MapPickerPage> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Izin lokasi ditolak.')),
+          );
+        }
         setState(() => _isLoading = false);
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Izin lokasi ditolak permanen. Ubah di pengaturan aplikasi.')),
+        );
+      }
       setState(() => _isLoading = false);
       return;
     }
 
-    Position position = await Geolocator.getCurrentPosition();
+    try {
+      Position position = await Geolocator.getCurrentPosition();
 
-    if (_isLoading) {
-      setState(() {
-        _center = LatLng(position.latitude, position.longitude);
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _center = LatLng(position.latitude, position.longitude);
-      });
+      if (_isLoading) {
+        setState(() {
+          _center = LatLng(position.latitude, position.longitude);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _center = LatLng(position.latitude, position.longitude);
+        });
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(_center, 15.0);
-      });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _mapController.move(_center, 15.0);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mendapatkan lokasi: $e')),
+        );
+      }
+      setState(() => _isLoading = false);
     }
   }
 
