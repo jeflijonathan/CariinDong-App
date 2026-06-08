@@ -51,6 +51,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: () async {
                       String? result = await _authService.loginUser(
                         _emailController.text,
@@ -105,6 +109,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
