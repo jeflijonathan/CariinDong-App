@@ -7,6 +7,17 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _isGoogleInitialized = false;
+
+  Future<void> _ensureGoogleInitialized() async {
+    if (!_isGoogleInitialized) {
+      await _googleSignIn.initialize(
+        serverClientId: '36334450962-n1v87j55r569lsl8mf3qsrd4eikgpcoe.apps.googleusercontent.com',
+      );
+      _isGoogleInitialized = true;
+    }
+  }
 
   Future<String?> registerUser({
     required UserModel user,
@@ -20,9 +31,10 @@ class AuthService {
 
       await _db.collection('users').doc(credential.user!.uid).set({
         'uid': credential.user!.uid,
-        'fullName': user.fullName,
+        'name': user.name,
         'email': user.email,
-        'profilePictureUrl': '',
+        'profilePicture': '',
+        'phoneNumber': user.phoneNumber,
         'role': 'user',
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -50,8 +62,8 @@ class AuthService {
         GoogleAuthProvider authProvider = GoogleAuthProvider();
         userCredential = await _auth.signInWithPopup(authProvider);
       } else {
-        final GoogleSignInAccount? googleUser = await GoogleSignIn.instance
-            .authenticate();
+        await _ensureGoogleInitialized();
+        final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
         if (googleUser == null) return "Proses dibatalkan";
 
         final GoogleSignInAuthentication googleAuth =
@@ -71,9 +83,10 @@ class AuthService {
         if (!doc.exists) {
           await _db.collection('users').doc(firebaseUser.uid).set({
             'uid': firebaseUser.uid,
-            'fullName': firebaseUser.displayName ?? '',
+            'name': firebaseUser.displayName ?? '',
             'email': firebaseUser.email ?? '',
-            'profilePictureUrl': firebaseUser.photoURL ?? '',
+            'profilePicture': firebaseUser.photoURL ?? '',
+            'phoneNumber': firebaseUser.phoneNumber ?? '',
             'role': 'user',
             'createdAt': FieldValue.serverTimestamp(),
           });
@@ -86,7 +99,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await GoogleSignIn.instance.signOut();
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 }
