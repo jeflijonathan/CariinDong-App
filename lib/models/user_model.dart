@@ -1,36 +1,57 @@
+enum UserRole { superAdmin, user }
+
 class UserModel {
-  final String? uid; // Tambahkan UID dari Firebase
-  final String fullName;
+  final String? uid;
+  final String name;
   final String email;
-  final String? profilePictureUrl;
-  final String? role;
+  final UserRole role;
+  final String profilePicture;
+  final String phoneNumber;
 
   UserModel({
     this.uid,
-    required this.fullName,
+    required this.name,
     required this.email,
-    this.profilePictureUrl,
-    this.role,
+    required this.role,
+    this.profilePicture = 'https://ui-avatars.com/api/?name=User',
+    this.phoneNumber = '',
   });
 
-  Map<String, dynamic> toJson() {
+  static final UserModel empty = UserModel(
+    uid: '',
+    name: 'Loading...',
+    email: '',
+    role: UserRole.user,
+    profilePicture: 'https://ui-avatars.com/api/?name=Loading',
+    phoneNumber: '',
+  );
+
+  Map<String, dynamic> toMap() {
     return {
       'uid': uid,
-      'fullName': fullName,
+      'name': name,
       'email': email,
-      'profilePictureUrl': profilePictureUrl ?? '',
-      'role': role ?? 'user',
+      'role': role.name,
+      'profilePicture': profilePicture,
+      'phoneNumber': phoneNumber,
     };
   }
 
-  // Untuk mengambil data dari Firestore ke aplikasi
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      uid: map['uid'],
-      fullName: map['fullName'],
-      email: map['email'],
-      profilePictureUrl: map['profilePictureUrl'],
-      role: map['role'],
+      uid: map['uid'] as String?,
+      name: map['name'] as String? ?? '',
+      email: map['email'] as String? ?? '',
+      role: _parseRole(map['role'] as String? ?? 'user'),
+      profilePicture:
+          map['profilePicture'] as String? ??
+          'https://ui-avatars.com/api/?name=User',
+      phoneNumber: map['phoneNumber'] as String? ?? '',
     );
+  }
+
+  static UserRole _parseRole(String roleName) {
+    if (roleName == 'superAdmin') return UserRole.superAdmin;
+    return UserRole.user;
   }
 }
