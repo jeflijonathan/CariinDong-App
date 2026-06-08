@@ -4,7 +4,7 @@ import 'search/search_page.dart';
 import 'profile/profile_page.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({Key? key}) : super(key: key);
+  const MainNavigation({super.key});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
