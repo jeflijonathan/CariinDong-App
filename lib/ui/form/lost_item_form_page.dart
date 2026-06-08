@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../../providers/app_state.dart';
-import '../../models/item_model.dart';
-import '../profile/edit_profile_page.dart';
-import 'map_picker_page.dart';
+import 'package:cariindong_app/providers/app_state.dart';
+import 'package:cariindong_app/models/item_model.dart';
+import 'package:cariindong_app/ui/profile/edit_profile_page.dart';
+import 'package:cariindong_app/ui/form/map_picker_page.dart';
 
 class LostItemFormPage extends StatefulWidget {
   const LostItemFormPage({super.key});
@@ -42,7 +42,7 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
-    if (_isPickingImage) return; // cegah double-tap
+    if (_isPickingImage) return;
     setState(() => _isPickingImage = true);
     try {
       final pickedFile = await _picker.pickImage(
@@ -66,7 +66,10 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
   Future<String?> _uploadImage(String itemId) async {
     if (_imageFile == null) return null;
     try {
-      final ref = FirebaseStorage.instance.ref().child('items').child('$itemId.jpg');
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('items')
+          .child('$itemId.jpg');
       await ref.putFile(_imageFile!);
       return await ref.getDownloadURL();
     } catch (e) {
@@ -219,7 +222,7 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Kategori'),
-                      value: _category,
+                      initialValue: _category,
                       items: _categories.map((cat) {
                         return DropdownMenuItem(value: cat, child: Text(cat));
                       }).toList(),
@@ -232,7 +235,7 @@ class _LostItemFormPageState extends State<LostItemFormPage> {
                       decoration: const InputDecoration(
                         labelText: 'Status Laporan',
                       ),
-                      value: _status,
+                      initialValue: _status,
                       items: const [
                         DropdownMenuItem(
                           value: ItemStatus.lost,
