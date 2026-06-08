@@ -29,11 +29,13 @@ class AppState extends ChangeNotifier {
             .doc(firebaseUser.uid)
             .snapshots()
             .listen((doc) {
-          if (doc.exists) {
-            _currentUser = UserModel.fromMap(doc.data() as Map<String, dynamic>);
-            notifyListeners();
-          }
-        });
+              if (doc.exists) {
+                _currentUser = UserModel.fromMap(
+                  doc.data() as Map<String, dynamic>,
+                );
+                notifyListeners();
+              }
+            });
       } else {
         _userSub?.cancel();
         _currentUser = UserModel.empty;
@@ -48,9 +50,11 @@ class AppState extends ChangeNotifier {
         .orderBy('date', descending: true)
         .snapshots()
         .listen((snapshot) {
-      _items = snapshot.docs.map((doc) => ItemModel.fromFirestore(doc)).toList();
-      notifyListeners();
-    });
+          _items = snapshot.docs
+              .map((doc) => ItemModel.fromFirestore(doc))
+              .toList();
+          notifyListeners();
+        });
   }
 
   @override
@@ -60,24 +64,30 @@ class AppState extends ChangeNotifier {
     super.dispose();
   }
 
-  // Statistics
   int get totalLost => _items.where((i) => i.status == ItemStatus.lost).length;
-  int get totalFound => _items.where((i) => i.status == ItemStatus.found).length;
-  int get totalClaimed => _items.where((i) => i.status == ItemStatus.claimed).length;
-  int get totalResolved => _items.where((i) => i.status == ItemStatus.resolved).length;
+  int get totalFound =>
+      _items.where((i) => i.status == ItemStatus.found).length;
+  int get totalClaimed =>
+      _items.where((i) => i.status == ItemStatus.claimed).length;
+  int get totalResolved =>
+      _items.where((i) => i.status == ItemStatus.resolved).length;
 
-  // Add Item
   Future<void> addItem(ItemModel item) async {
-    await FirebaseFirestore.instance.collection('items').doc(item.id).set(item.toMap());
+    await FirebaseFirestore.instance
+        .collection('items')
+        .doc(item.id)
+        .set(item.toMap());
   }
 
-  // Delete Item (SuperAdmin only)
   Future<void> deleteItem(String id) async {
     await FirebaseFirestore.instance.collection('items').doc(id).delete();
   }
 
-  // Claim Item — a user claims they found/have the item
-  Future<void> claimItem(String itemId, UserModel claimer, {String? claimerProofUrl}) async {
+  Future<void> claimItem(
+    String itemId,
+    UserModel claimer, {
+    String? claimerProofUrl,
+  }) async {
     final Map<String, dynamic> data = {
       'status': ItemStatus.claimed.toString(),
       'claimedByUid': claimer.uid,
@@ -87,10 +97,12 @@ class AppState extends ChangeNotifier {
     if (claimerProofUrl != null) {
       data['claimerProofUrl'] = claimerProofUrl;
     }
-    await FirebaseFirestore.instance.collection('items').doc(itemId).update(data);
+    await FirebaseFirestore.instance
+        .collection('items')
+        .doc(itemId)
+        .update(data);
   }
 
-  // Confirm Claim — reporter confirms the claim, with proof photo URL
   Future<void> confirmClaim(String itemId, {String? proofUrl}) async {
     final Map<String, dynamic> updateData = {
       'status': ItemStatus.resolved.toString(),
@@ -98,10 +110,12 @@ class AppState extends ChangeNotifier {
     if (proofUrl != null) {
       updateData['claimProofUrl'] = proofUrl;
     }
-    await FirebaseFirestore.instance.collection('items').doc(itemId).update(updateData);
+    await FirebaseFirestore.instance
+        .collection('items')
+        .doc(itemId)
+        .update(updateData);
   }
 
-  // Reject Claim — reporter rejects the claim, revert to original status
   Future<void> rejectClaim(String itemId, ItemStatus originalStatus) async {
     await FirebaseFirestore.instance.collection('items').doc(itemId).update({
       'status': originalStatus.toString(),
@@ -112,18 +126,21 @@ class AppState extends ChangeNotifier {
     });
   }
 
-  // Update Item Status (legacy helper)
-  Future<void> updateItemStatus(String id, ItemStatus newStatus, {String? receiverName}) async {
-    final Map<String, dynamic> updateData = {
-      'status': newStatus.toString(),
-    };
+  Future<void> updateItemStatus(
+    String id,
+    ItemStatus newStatus, {
+    String? receiverName,
+  }) async {
+    final Map<String, dynamic> updateData = {'status': newStatus.toString()};
     if (receiverName != null) {
       updateData['receiverName'] = receiverName;
     }
-    await FirebaseFirestore.instance.collection('items').doc(id).update(updateData);
+    await FirebaseFirestore.instance
+        .collection('items')
+        .doc(id)
+        .update(updateData);
   }
 
-  // Search and Filter
   String _searchQuery = '';
   String _selectedCategory = 'Semua';
   ItemStatus? _selectedStatus;
@@ -145,10 +162,13 @@ class AppState extends ChangeNotifier {
 
   List<ItemModel> get filteredItems {
     return _items.where((item) {
-      final matchesSearch = item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      final matchesSearch =
+          item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           item.description.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesCategory = _selectedCategory == 'Semua' || item.category == _selectedCategory;
-      final matchesStatus = _selectedStatus == null || item.status == _selectedStatus;
+      final matchesCategory =
+          _selectedCategory == 'Semua' || item.category == _selectedCategory;
+      final matchesStatus =
+          _selectedStatus == null || item.status == _selectedStatus;
       return matchesSearch && matchesCategory && matchesStatus;
     }).toList();
   }
