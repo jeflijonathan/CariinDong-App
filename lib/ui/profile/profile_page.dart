@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
-import '../../providers/app_state.dart';
-import '../widgets/item_card.dart';
-import 'edit_profile_page.dart';
+import 'package:cariindong_app/providers/app_state.dart';
+import 'package:cariindong_app/ui/widgets/item_card.dart';
+import 'package:cariindong_app/ui/profile/edit_profile_page.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
