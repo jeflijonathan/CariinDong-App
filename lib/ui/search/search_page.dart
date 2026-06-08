@@ -69,7 +69,6 @@ class SearchPage extends StatelessWidget {
               },
             ),
           ),
-          // Filter Status (Hilang/Ditemukan)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
