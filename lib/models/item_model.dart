@@ -22,6 +22,7 @@ class ItemModel {
   final String? imageUrl;
   final double? latitude;
   final double? longitude;
+  final List<Map<String, dynamic>> pendingClaims;
 
   ItemModel({
     required this.id,
@@ -43,6 +44,7 @@ class ItemModel {
     this.imageUrl,
     this.latitude,
     this.longitude,
+    this.pendingClaims = const [],
   });
 
   factory ItemModel.fromFirestore(DocumentSnapshot doc) {
@@ -52,7 +54,6 @@ class ItemModel {
       if (statusStr == 'ItemStatus.lost') return ItemStatus.lost;
       if (statusStr == 'ItemStatus.found') return ItemStatus.found;
       if (statusStr == 'ItemStatus.claimed') return ItemStatus.claimed;
-      if (statusStr == 'ItemStatus.resolved') return ItemStatus.resolved;
       return ItemStatus.lost;
     }
 
@@ -76,6 +77,7 @@ class ItemModel {
       imageUrl: data['imageUrl'],
       latitude: (data['latitude'] as num?)?.toDouble(),
       longitude: (data['longitude'] as num?)?.toDouble(),
+      pendingClaims: List<Map<String, dynamic>>.from(data['pendingClaims'] ?? []),
     );
   }
 
@@ -99,6 +101,7 @@ class ItemModel {
       'imageUrl': imageUrl,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      'pendingClaims': pendingClaims,
     };
   }
 }
