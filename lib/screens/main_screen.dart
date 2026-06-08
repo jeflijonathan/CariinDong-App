@@ -1,5 +1,5 @@
-import 'package:cariindong_app/screens/home_screen.dart';
 import 'package:cariindong_app/screens/login_screen.dart';
+import 'package:cariindong_app/ui/main_navigation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -17,7 +17,7 @@ class MainScreen extends StatelessWidget {
           }
 
           if (snapshot.hasData) {
-            return const HomeScreen();
+            return const MainNavigation();
           }
 
           return const LoginScreen();
@@ -26,3 +26,4 @@ class MainScreen extends StatelessWidget {
     );
   }
 }
+
