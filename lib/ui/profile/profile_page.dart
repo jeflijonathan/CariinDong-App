@@ -14,23 +14,12 @@ class ProfilePage extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
     final user = appState.currentUser;
 
-    // Filter items belonging to current user
     final userItems = appState.items
         .where((i) => i.reporterName == user.name)
         .toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil Saya'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // Settings dummy
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Cariin Dong')),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
