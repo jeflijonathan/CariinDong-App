@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/app_state.dart';
+import 'package:cariindong_app/providers/app_state.dart';
 
 class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({Key? key}) : super(key: key);
+  const EditProfilePage({super.key});
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -20,7 +20,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   File? _imageFile;
   bool _isLoading = false;
-  bool _isPickingImage = false; // cegah PlatformException(already_active)
+  bool _isPickingImage = false;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -46,7 +46,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 60,   // sedikit lebih kecil agar base64 tidak terlalu besar
+        imageQuality: 60,
         maxWidth: 512,
         maxHeight: 512,
       );
@@ -62,7 +62,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  /// Encode gambar ke base64 string
   Future<String?> _encodeImageToBase64() async {
     if (_imageFile == null) return null;
     try {
@@ -87,7 +86,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         throw Exception('User ID tidak ditemukan');
       }
 
-      // Encode foto baru ke base64 jika ada
       String? newProfilePicture;
       if (_imageFile != null) {
         newProfilePicture = await _encodeImageToBase64();
@@ -101,7 +99,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         'phoneNumber': newPhone,
       };
 
-      // Hanya update profilePicture jika ada gambar baru
       if (newProfilePicture != null) {
         updateData['profilePicture'] = newProfilePicture;
       }
@@ -119,25 +116,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memperbarui profil: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memperbarui profil: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Build avatar: prioritaskan file lokal baru, lalu base64 dari Firestore, lalu fallback inisial
   Widget _buildAvatar(String currentProfilePicture) {
     ImageProvider? imageProvider;
 
     if (_imageFile != null) {
-      // Preview gambar yang baru dipilih (belum disimpan)
       imageProvider = FileImage(_imageFile!);
     } else if (currentProfilePicture.isNotEmpty &&
         !currentProfilePicture.startsWith('http')) {
-      // Dari Firestore sebagai base64
       try {
         final bytes = base64Decode(currentProfilePicture);
         imageProvider = MemoryImage(bytes);
@@ -145,7 +139,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         imageProvider = null;
       }
     } else if (currentProfilePicture.startsWith('http')) {
-      // Dari Google Sign-In (URL)
       imageProvider = NetworkImage(currentProfilePicture);
     }
 
@@ -169,9 +162,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final user = Provider.of<AppState>(context).currentUser;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profil'),
-      ),
+      appBar: AppBar(title: const Text('Edit Profil')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -180,7 +171,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Avatar + tombol kamera
                     GestureDetector(
                       onTap: _pickImage,
                       child: Stack(
@@ -215,7 +205,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.person),
                       ),
-                      validator: (value) => value == null || value.trim().isEmpty
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
                           ? 'Nama tidak boleh kosong'
                           : null,
                     ),
