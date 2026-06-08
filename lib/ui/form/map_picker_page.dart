@@ -68,11 +68,13 @@ class _MapPickerPageState extends State<MapPickerPage> {
       if (_isLoading) {
         setState(() {
           _center = LatLng(position.latitude, position.longitude);
+          _selectedLocation = _center;
           _isLoading = false;
         });
       } else {
         setState(() {
           _center = LatLng(position.latitude, position.longitude);
+          _selectedLocation = _center;
         });
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
