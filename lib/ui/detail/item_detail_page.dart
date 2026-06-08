@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -17,7 +16,7 @@ import 'full_screen_map_page.dart';
 class ItemDetailPage extends StatefulWidget {
   final ItemModel item;
 
-  const ItemDetailPage({Key? key, required this.item}) : super(key: key);
+  const ItemDetailPage({super.key, required this.item});
 
   @override
   State<ItemDetailPage> createState() => _ItemDetailPageState();
@@ -25,8 +24,8 @@ class ItemDetailPage extends StatefulWidget {
 
 class _ItemDetailPageState extends State<ItemDetailPage> {
   bool _isLoading = false;
-  bool _isPickingImage = false; // cegah PlatformException(already_active)
-  final _picker = ImagePicker(); // satu instance bersama
+  bool _isPickingImage = false;
+  final _picker = ImagePicker();
 
   Color _getStatusColor(ItemStatus status) {
     switch (status) {
@@ -54,12 +53,10 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     }
   }
 
-  // ─── KLAIM: pengklaim harus upload foto bukti terlebih dahulu ───────────────
   Future<void> _claimItem() async {
     final appState = Provider.of<AppState>(context, listen: false);
     final currentUser = appState.currentUser;
 
-    // Step 1: Konfirmasi niat klaim
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -85,7 +82,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     if (confirm != true) return;
     if (!mounted) return;
 
-    // Step 2: Wajib ambil foto bukti pengklaim
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -160,7 +156,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
       return;
     }
 
-    // Step 3: Upload foto & simpan klaim
     setState(() => _isLoading = true);
     try {
       final file = File(pickedFile.path);
@@ -198,15 +193,12 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     }
   }
 
-  // ─── KONFIRMASI (pelapor menyetujui klaim + foto serah terima) ──────────────
   Future<void> _confirmClaim() async {
     final appState = Provider.of<AppState>(context, listen: false);
 
-    // Tampilkan foto bukti pengklaim terlebih dahulu untuk diperiksa
     final proceed = await _showClaimerProofDialog();
     if (proceed != true) return;
 
-    // Pelapor harus juga ambil foto serah terima sebagai tanda selesai
     if (!mounted) return;
     final confirmPhoto = await showDialog<bool>(
       context: context,
@@ -315,7 +307,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     }
   }
 
-  // Dialog untuk pelapor melihat foto bukti pengklaim sebelum memutuskan
   Future<bool?> _showClaimerProofDialog() {
     final item = widget.item;
     return showDialog<bool>(
@@ -352,7 +343,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
               ),
               const SizedBox(height: 16),
 
-              // Info pengklaim
               _buildInfoRowCompact(
                 Icons.person,
                 'Nama',
@@ -366,7 +356,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
               ),
               const SizedBox(height: 12),
 
-              // Foto bukti pengklaim
               if (item.claimerProofUrl != null &&
                   item.claimerProofUrl!.isNotEmpty) ...[
                 const Text(
@@ -603,7 +592,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Foto Barang ────────────────────────────────────────────
                   if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
                     _buildImage(item.imageUrl!)
                   else
@@ -633,7 +621,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Status & Tanggal ──────────────────────────────────
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -671,7 +658,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // ── Judul ─────────────────────────────────────────────
                         Text(
                           item.title,
                           style: const TextStyle(
@@ -681,7 +667,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // ── Info ──────────────────────────────────────────────
                         _buildInfoRow(
                           Icons.location_on,
                           'Lokasi',
@@ -708,7 +693,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                               : 'Tidak tersedia',
                         ),
 
-                        // ── Map View ──────────────────────────────────────────
                         const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -773,7 +757,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                           ),
                         ),
 
-                        // ── Keterangan Tambahan ───────────────────────────────
                         const SizedBox(height: 24),
                         const Text(
                           'Keterangan Tambahan',
@@ -796,7 +779,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                           ),
                         ),
 
-                        // ── Info Klaim / Selesai ──────────────────────────────
                         if (isClaimed || isResolved) ...[
                           const SizedBox(height: 24),
                           Container(
@@ -843,7 +825,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                                   ),
                                 ],
 
-                                // Foto bukti dari pengklaim (hanya ditampilkan ke pelapor)
                                 if (isReporter &&
                                     item.claimerProofUrl != null &&
                                     item.claimerProofUrl!.isNotEmpty) ...[
@@ -916,7 +897,6 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                           ),
                         ],
 
-                        // ── Foto Bukti Serah Terima (Selesai) ─────────────────
                         if (isResolved &&
                             item.claimProofUrl != null &&
                             item.claimProofUrl!.isNotEmpty) ...[
@@ -949,10 +929,8 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                           ),
                         ],
 
-                        // ── Action Buttons ─────────────────────────────────────
                         const SizedBox(height: 32),
 
-                        // Pengklaim
                         if (canClaim)
                           SizedBox(
                             width: double.infinity,
@@ -970,9 +948,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                             ),
                           ),
 
-                        // Pelapor: konfirmasi / tolak saat diklaim
                         if (isReporter && isClaimed) ...[
-                          // Banner instruksi
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -1047,12 +1023,10 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     );
   }
 
-  // Membangun tampilan Peta dengan FlutterMap
   Widget _buildMapView(double lat, double lng) {
     return _FlutterMapView(lat: lat, lng: lng);
   }
 
-  // Placeholder jika koordinat tidak tersedia
   Widget _buildNoMapPlaceholder(String location) {
     return Container(
       color: Colors.grey.shade100,
