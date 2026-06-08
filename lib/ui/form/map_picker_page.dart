@@ -5,7 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
 class MapPickerPage extends StatefulWidget {
-  const MapPickerPage({Key? key}) : super(key: key);
+  const MapPickerPage({super.key});
 
   @override
   State<MapPickerPage> createState() => _MapPickerPageState();
@@ -47,20 +47,14 @@ class _MapPickerPageState extends State<MapPickerPage> {
       return;
     }
 
-    // 1. Ambil koordinat GPS
     Position position = await Geolocator.getCurrentPosition();
 
-    // 2. Jika ini adalah loading awal (peta belum nge-render),
-    // cukup update koordinatnya saja, biarkan 'initialCenter' di FlutterMap yang bekerja.
     if (_isLoading) {
       setState(() {
         _center = LatLng(position.latitude, position.longitude);
-        _isLoading =
-            false; // FlutterMap akan mulai dirender dengan pusat koordinat baru
+        _isLoading = false;
       });
     } else {
-      // 3. Jika peta SUDAH dirender (misal tombol GPS ditekan ulang oleh user),
-      // maka aman menggunakan mapController lewat post frame callback.
       setState(() {
         _center = LatLng(position.latitude, position.longitude);
       });
@@ -93,7 +87,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
 
       if (mounted) {
         Navigator.pop(context, {
-          'address': address.isNotEmpty ? address : '${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}',
+          'address': address.isNotEmpty
+              ? address
+              : '${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}',
           'latitude': _selectedLocation!.latitude,
           'longitude': _selectedLocation!.longitude,
         });
@@ -101,7 +97,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context, {
-          'address': '${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}',
+          'address':
+              '${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}',
           'latitude': _selectedLocation!.latitude,
           'longitude': _selectedLocation!.longitude,
         });
