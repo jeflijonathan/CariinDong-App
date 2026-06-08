@@ -79,6 +79,13 @@ class AppState extends ChangeNotifier {
         .set(item.toMap());
   }
 
+  Future<void> updateItem(ItemModel item) async {
+    await FirebaseFirestore.instance
+        .collection('items')
+        .doc(item.id)
+        .update(item.toMap());
+  }
+
   Future<void> deleteItem(String id) async {
     await FirebaseFirestore.instance.collection('items').doc(id).delete();
   }
@@ -88,19 +95,53 @@ class AppState extends ChangeNotifier {
     UserModel claimer, {
     String? claimerProofUrl,
   }) async {
+    final Map<String, dynamic> claimData = {
+      'uid': claimer.uid,
+      'name': claimer.name,
+      'phone': claimer.phoneNumber,
+      'date': Timestamp.now(),
+      'proofUrl': claimerProofUrl,
+    };
+
+    await FirebaseFirestore.instance
+        .collection('items')
+        .doc(itemId)
+        .update({
+      'pendingClaims': FieldValue.arrayUnion([claimData])
+    });
+  }
+
+  Future<void> acceptClaim(String itemId, Map<String, dynamic> claim) async {
     final Map<String, dynamic> data = {
       'status': ItemStatus.claimed.toString(),
-      'claimedByUid': claimer.uid,
-      'claimedByName': claimer.name,
-      'claimedByPhone': claimer.phoneNumber,
+      'claimedByUid': claim['uid'],
+      'claimedByName': claim['name'],
+      'claimedByPhone': claim['phone'],
+      'claimerProofUrl': claim['proofUrl'],
     };
-    if (claimerProofUrl != null) {
-      data['claimerProofUrl'] = claimerProofUrl;
-    }
     await FirebaseFirestore.instance
         .collection('items')
         .doc(itemId)
         .update(data);
+  }
+
+  Future<void> cancelPendingClaim(String itemId, String claimerUid) async {
+    final doc = await FirebaseFirestore.instance.collection('items').doc(itemId).get();
+    if (!doc.exists) return;
+    
+    final itemData = doc.data() as Map<String, dynamic>;
+    final pendingClaims = List<dynamic>.from(itemData['pendingClaims'] ?? []);
+    
+    final claimToRemove = pendingClaims.firstWhere(
+      (claim) => claim['uid'] == claimerUid,
+      orElse: () => null,
+    );
+
+    if (claimToRemove != null) {
+      await FirebaseFirestore.instance.collection('items').doc(itemId).update({
+        'pendingClaims': FieldValue.arrayRemove([claimToRemove]),
+      });
+    }
   }
 
   Future<void> confirmClaim(String itemId, {String? proofUrl}) async {
